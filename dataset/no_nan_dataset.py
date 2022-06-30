@@ -1,9 +1,9 @@
-import torch, csv, datetime
+import torch, csv, datetime, os
 from .common import gather_files_from_dir_list
 
 
 class NoNanColsDataset_v1(torch.utils.data.Dataset):
-    def __init__(self, dir_list, data_flatten_size):
+    def __init__(self, dir_list, label_csv_file, data_flatten_size):
 
         self.dir_list = dir_list
         assert dir_list, "no dir list"
@@ -224,6 +224,23 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             "R_28": {"type": "float"},
         }
 
+        assert os.path.exists(label_csv_file)
+        self.label_csv_file = label_csv_file
+        self.load_label()
+
+    def load_label(self):
+        self.label_dict = {}
+        with open(self.label_csv_file, "r") as fd:
+            reader = csv.reader(fd)
+
+            header = next(reader)
+
+            for r in reader:
+                cid = r[0]
+                label = float(r[1])
+
+                self.label_dict[cid] = label
+
     def __len__(self):
 
         return len(self.files)
@@ -294,8 +311,11 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             lines = list(reader)
 
         assert lines, "no rows found"
+
+        # get cid
+        cid = lines[0][0]
+        label = self.label_dict[cid]
         # handle lines
-        token_list = []
 
         data_list = []
         for l in lines:
@@ -312,8 +332,9 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
         ]
 
         return {
-            "type_tokens": torch.IntTensor(type_token_list),
-            "feature_datas": torch.FloatTensor(data_arr_list),
+            "token_types": torch.IntTensor(type_token_list),
+            "token_features": torch.FloatTensor(data_arr_list),
+            "label": torch.FloatTensor([label])
         }
 
     def __getitem__(self, idx):
