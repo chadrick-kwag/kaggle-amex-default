@@ -256,7 +256,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             el_list = s.split("-")
             assert len(el_list) == 3, f"invalid date format: {s}"
 
-            d = datetime.datetime(*el_list)
+            d = datetime.datetime(*map(int, el_list))
             return d
 
     def convert_date_values_from_datetime_to_int_value(self, data_list):
@@ -282,7 +282,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
             data[k] = real_v
 
-        return
+        return data
 
     def convert_row_data_dict_to_vector(self, row_data):
 
@@ -334,7 +334,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
         return {
             "token_types": torch.IntTensor(type_token_list),
             "token_features": torch.FloatTensor(data_arr_list),
-            "label": torch.FloatTensor([label])
+            "label": torch.FloatTensor([label]),
         }
 
     def __getitem__(self, idx):

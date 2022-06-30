@@ -1,6 +1,13 @@
-import pytorch_lightning as pl, os, yaml
+import pytorch_lightning as pl, os, yaml, sys
 import torch, argparse
 from munch import munchify
+
+if __name__ == "__main__":
+
+    rootdir = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+    if rootdir not in sys.path:
+        sys.path.append(rootdir)
+
 from dataset.no_nan_dataset import NoNanColsDataset_v1
 
 
@@ -22,6 +29,10 @@ class Encoder(torch.nn.Module):
         self.encoder = torch.nn.TransformerEncoder(
             encoder_layer, num_layers, norm=encoder_norm
         )
+
+    def forward(self, x):
+
+        return self.encoder(x)
 
 
 class TwoStageLinearModule(torch.nn.Module):
@@ -49,7 +60,7 @@ class Model_v1(pl.LightningModule):
         activation,
         num_layers,
         token_type_embedding_size,
-        feature_size,
+        feature_dim,
     ):
         super().__init__()
 
@@ -58,7 +69,7 @@ class Model_v1(pl.LightningModule):
         self.token_type_embedding = torch.nn.Embedding(
             token_type_embedding_size, d_model
         )
-        self.token_feature_embedding = TwoStageLinearModule(feature_size, 512, d_model)
+        self.token_feature_embedding = TwoStageLinearModule(feature_dim, 512, d_model)
 
         self.encoder_output_clsf_module = TwoStageLinearModule(d_model, 512, 2)
 
@@ -86,7 +97,7 @@ class Model_v1(pl.LightningModule):
         cls_output = output["clsf_output"][:, 0]
         cls_output = torch.softmax(cls_output, -1)
 
-        default_prob = cls_output[:, 1]
+        default_prob = cls_output[:, None, 1]
 
         loss = torch.nn.functional.binary_cross_entropy(default_prob, batch["label"])
 
@@ -105,12 +116,12 @@ def main(config):
         config.model.activation,
         config.model.num_layers,
         config.model.token_type_embedding_size,
-        config.model.feature_size,
+        config.model.feature_dim,
     )
     train_dataset = NoNanColsDataset_v1(
         config.train_data.dir_list,
-        config.train.label_csv_file,
-        config.train.data_flatten_size,
+        config.train_data.label_csv_file,
+        config.train_data.data_flatten_size,
     )
     train_dataloader = torch.utils.data.DataLoader(train_dataset)
 
@@ -137,4 +148,5 @@ def cli():
 
 
 if __name__ == "__main__":
+
     cli()

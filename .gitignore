@@ -5,3 +5,5 @@
 data
 notes.txt
 .vscode
+**/config/**
+**/lightning_logs
