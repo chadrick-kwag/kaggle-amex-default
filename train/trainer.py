@@ -1,6 +1,6 @@
-import pytorch_lightning as pl
-import torch
-
+import pytorch_lightning as pl, os, yaml
+import torch, argparse
+from munch import munchify
 from dataset.no_nan_dataset import NoNanColsDataset_v1
 
 
@@ -77,9 +77,64 @@ class Model_v1(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
 
-        return
+        input_data = {}
+        input_data["token_types"] = batch["token_types"]
+        input_data["token_features"] = batch["token_features"]
+
+        output = self.forward(**input_data)
+
+        cls_output = output["clsf_output"][:, 0]
+        cls_output = torch.softmax(cls_output, -1)
+
+        default_prob = cls_output[:, 1]
+
+        loss = torch.nn.functional.binary_cross_entropy(default_prob, batch["label"])
+
+        return loss
+
+    def configure_optimizers(self):
+
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
 
 
-def main():
+def main(config):
+    model = Model_v1(
+        config.model.d_model,
+        config.model.n_head,
+        config.model.activation,
+        config.model.num_layers,
+        config.model.token_type_embedding_size,
+        config.model.feature_size,
+    )
+    train_dataset = NoNanColsDataset_v1(
+        config.train_data.dir_list,
+        config.train.label_csv_file,
+        config.train.data_flatten_size,
+    )
+    train_dataloader = torch.utils.data.DataLoader(train_dataset)
 
     trainer = pl.Trainer()
+    trainer.fit(model=model, train_dataloaders=train_dataloader)
+
+
+def cli():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("config", type=str, help="config file")
+
+    args = parser.parse_args()
+
+    config = args.config
+    assert os.path.exists(config), "config file not exist"
+
+    with open(config, "r") as fd:
+        config = yaml.load(fd, Loader=yaml.FullLoader)
+    config = munchify(config)
+
+    main(config)
+
+
+if __name__ == "__main__":
+    cli()
