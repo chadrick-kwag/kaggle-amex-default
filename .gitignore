@@ -7,3 +7,4 @@ notes.txt
 .vscode
 **/config/**
 **/lightning_logs
+**/ckpt

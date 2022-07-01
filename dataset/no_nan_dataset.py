@@ -337,6 +337,63 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             "label": torch.FloatTensor([label]),
         }
 
+    @classmethod
+    def collate(cls, data_list):
+
+        batch_token_type = []
+        batch_token_features = []
+        batch_label = []
+        seq_len_list = []
+        for d in data_list:
+            seq_len_list.append(d["token_types"].shape[0])
+            batch_token_type.append(d["token_types"])
+            batch_token_features.append(d["token_features"])
+            batch_label.append(d["label"])
+
+        max_seq_len = max(seq_len_list)
+
+        token_types_dtype = data_list[0]["token_types"].dtype
+        batch_token_types = torch.zeros(
+            (len(data_list), max_seq_len), dtype=token_types_dtype
+        )
+        for i, d in enumerate(data_list):
+            seq_len = d["token_types"].shape[0]
+            batch_token_types[i, :seq_len] = d["token_types"]
+
+        features_dim = data_list[0]["token_features"].shape[1]
+        features_dtype = data_list[0]["token_features"].dtype
+
+        batch_token_features = torch.zeros(
+            (len(data_list), max_seq_len, features_dim), dtype=features_dtype
+        )
+        for i, d in enumerate(data_list):
+            seq_len = d["token_features"].shape[0]
+            batch_token_features[i, :seq_len] = d["token_features"]
+
+        label_dim = data_list[0]["label"].shape[0]
+        label_dtype = data_list[0]["label"].dtype
+        batch_label = torch.zeros((len(data_list), label_dim), dtype=label_dtype)
+
+        for i, d in enumerate(data_list):
+            batch_label[i] = d["label"]
+
+        # create key_padding_mask
+        batch_key_padding_mask = torch.ones(
+            (len(data_list), max_seq_len), dtype=torch.bool
+        )
+        # true will ignore
+        for i, l in enumerate(seq_len_list):
+            batch_key_padding_mask[i, :l] = False
+
+        batched_data = {
+            "token_types": batch_token_types,
+            "token_features": batch_token_features,
+            "label": batch_label,
+            "key_padding_mask": batch_key_padding_mask,
+        }
+
+        return batched_data
+
     def __getitem__(self, idx):
 
         f = self.files[idx]
