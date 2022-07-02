@@ -1,5 +1,6 @@
 import pytorch_lightning as pl, os, yaml, sys, datetime
-import torch, argparse
+from pytorch_lightning.callbacks import ModelCheckpoint
+import torch, argparse, torchmetrics
 from munch import munchify
 
 if __name__ == "__main__":
@@ -67,6 +68,8 @@ class Model_v1(pl.LightningModule):
         self.config = config
         self.batch_size = 1
 
+        self.auroc_metric = torchmetrics.AUROC()
+
         self.encoder = Encoder(d_model, nhead, activation, num_layers)
 
         self.token_type_embedding = torch.nn.Embedding(
@@ -112,7 +115,10 @@ class Model_v1(pl.LightningModule):
 
         loss = torch.nn.functional.binary_cross_entropy(default_prob, batch["label"])
 
+        self.auroc_metric.update(default_prob, batch["label"].int())
+
         self.log("valid_loss", loss)
+        self.log("auroc", self.auroc_metric)
 
     def training_step(self, batch, batch_idx):
 
@@ -184,14 +190,25 @@ def main(config):
     with open(p, "w") as fd:
         yaml.dump(config)
 
+    # callback setup
+
+    callbacks = []
+    savedir = os.path.join(outputdir, "periodic_save")
+    os.makedirs(savedir)
+    periodic_save_callback = ModelCheckpoint(
+        dirpath=savedir, save_weights_only=True, every_n_train_steps=10
+    )
+    callbacks.append(periodic_save_callback)
+
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[0],
         # auto_scale_batch_size="power",
         val_check_interval=config.val_check_interval,
         default_root_dir=outputdir,
+        callbacks=callbacks,
     )
-    # trainer.tune(model)
+
     trainer.fit(
         model=model,
         train_dataloaders=train_dataloader,
