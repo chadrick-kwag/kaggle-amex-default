@@ -186,7 +186,10 @@ def main(config):
 
     # create outputdir
     timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+    suffix = config.suffix
     outputdir = f"ckpt/trainer/{timestamp}"
+    if suffix is not None:
+        outputdir = outputdir + f"-{suffix}"
     os.makedirs(outputdir)
 
     # save config
