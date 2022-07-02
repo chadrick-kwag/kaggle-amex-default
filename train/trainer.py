@@ -166,6 +166,9 @@ def main(config):
         batch_size=config.batch_size,
         shuffle=True,
         collate_fn=NoNanColsDataset_v1.collate,
+        num_workers=config.train_data.num_workers,
+        prefetch_factor=config.train_data.prefetch_factor,
+        drop_last=config.train_data.drop_last,
     )
 
     valid_dataset = NoNanColsDataset_v1(
@@ -177,6 +180,8 @@ def main(config):
         valid_dataset,
         batch_size=config.batch_size,
         collate_fn=NoNanColsDataset_v1.collate,
+        num_workers=2,
+        prefetch_factor=2,
     )
 
     # create outputdir
