@@ -198,12 +198,25 @@ def main(config):
     periodic_save_callback = ModelCheckpoint(
         dirpath=savedir, save_weights_only=True, every_n_train_steps=10
     )
+
     callbacks.append(periodic_save_callback)
+
+    ## add auroc ckpt saver
+    savedir = os.path.join(outputdir, "auroc_save")
+    os.makedirs(savedir)
+    auroc_save_callback = ModelCheckpoint(
+        dirpath=savedir,
+        monitor="auroc",
+        mode="max",
+        save_top_k=2,
+        save_weights_only=True,
+        filename="{epoch}-{step}-{auroc:.3f}",
+    )
+    callbacks.append(auroc_save_callback)
 
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[0],
-        # auto_scale_batch_size="power",
         val_check_interval=config.val_check_interval,
         default_root_dir=outputdir,
         callbacks=callbacks,
