@@ -8,3 +8,4 @@ notes.txt
 **/config/**
 **/lightning_logs
 **/ckpt
+!**/config/**/sample.yaml
