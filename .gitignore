@@ -5,7 +5,7 @@
 data
 notes.txt
 .vscode
-**/config/**
 **/lightning_logs
 **/ckpt
+**/config/**/*.yaml
 !**/config/**/sample.yaml

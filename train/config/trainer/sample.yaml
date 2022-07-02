@@ -1,0 +1,31 @@
+model:
+  d_model: 128
+  n_head: 8
+  activation: gelu
+  num_layers: 6
+  token_type_embedding_size: 128
+  feature_dim: 72
+
+batch_size: 128
+
+suffix: base
+
+train_data:
+  dir_list:
+    - /path/to/train/dir
+  label_csv_file: /train/data/train_labels.csv
+  data_flatten_size: 72
+  drop_last: true
+  num_workers: 8
+  prefetch_factor: 2
+
+valid_data:
+  dir_list:
+    - /path/to/valid/dir
+  label_csv_file: /train/data/train_labels.csv
+  data_flatten_size: 72
+
+
+val_check_interval: 1000
+
+lr: 1.e-5
