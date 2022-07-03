@@ -204,7 +204,7 @@ def main(config):
     savedir = os.path.join(outputdir, "periodic_save")
     os.makedirs(savedir)
     periodic_save_callback = ModelCheckpoint(
-        dirpath=savedir, save_weights_only=True, every_n_train_steps=10
+        dirpath=savedir, save_weights_only=True, every_n_train_steps=config.periodic_save_interval
     )
 
     callbacks.append(periodic_save_callback)
