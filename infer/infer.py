@@ -59,7 +59,12 @@ def main(config, outputdir):
     print("model load ckpt complete")
 
     dataset = NoNanColsDataset_v1(
-        config.infer_data.dir_list, None, config.infer_data.data_flatten_size
+        config.infer_data.dir_list,
+        None,
+        config.infer_data.data_flatten_size,
+        missing_default_value_pkl_file=config.infer_data.missing_default_value_pkl_file
+        if hasattr(config.infer_data, "missing_default_value_pkl_file")
+        else None,
     )
 
     print("dataset load complete")
@@ -90,7 +95,7 @@ def main(config, outputdir):
     with open(p, "w") as fd:
         writer = csv.writer(fd, delimiter="\t")
 
-        writer.writerow(["customer_ID", "prediction"])
+        writer.writerow(["customer_ID", "prediction", "raw_prediction"])
 
         for data in tqdm(infer_dataloader):
             input_data = {}
@@ -110,9 +115,11 @@ def main(config, outputdir):
                 default_threshold_result = default_prob > config.threshold
                 default_threshold_result = default_threshold_result.int().cpu()
 
-                for f, r in zip(data["files"], default_threshold_result):
+                for f, r, p in zip(
+                    data["files"], default_threshold_result, default_prob.cpu()
+                ):
                     fn = get_fn(f)
-                    writer.writerow((fn, r.item()))
+                    writer.writerow((fn, r.item(), p.item()))
 
     print("done")
 

@@ -1,9 +1,15 @@
-import torch, csv, datetime, os
+import torch, csv, datetime, os, pickle
 from .common import gather_files_from_dir_list
 
 
 class NoNanColsDataset_v1(torch.utils.data.Dataset):
-    def __init__(self, dir_list, label_csv_file, data_flatten_size):
+    def __init__(
+        self,
+        dir_list,
+        label_csv_file,
+        data_flatten_size,
+        missing_default_value_pkl_file=None,
+    ):
 
         self.dir_list = dir_list
         assert dir_list, "no dir list"
@@ -11,6 +17,8 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
         assert data_flatten_size > 0, f"invalid data flatten size: {data_flatten_size}"
         self.data_flatten_size = data_flatten_size
+
+        self.missing_default_value_pkl_file = missing_default_value_pkl_file
 
         self.header_flatten_order_list = [
             "S_2",
@@ -226,6 +234,20 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
         self.label_csv_file = label_csv_file
         self.load_label()
+        self.load_missing_default_value_pkl_file()
+
+    def load_missing_default_value_pkl_file(self):
+
+        self.missing_default_value_dict = None
+
+        if self.missing_default_value_pkl_file is None:
+            return
+
+        with open(self.missing_default_value_pkl_file, "rb") as fd:
+
+            data = pickle.load(fd)
+
+        self.missing_default_value_dict = data
 
     def load_label(self):
 
@@ -282,6 +304,12 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
         for k, i in self.header_index_dict.items():
             v = row[i]
+
+            # if value is missing, fill it with default value if missing default setup exists
+            if self.missing_default_value_dict is not None and v == "":
+                default_value = self.missing_default_value_dict[k]
+                v = default_value
+
             t = self.header_type_dict[k]
 
             real_v = self.convert_string_to_appropriate_value(v, t)
@@ -309,6 +337,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
         return val_list
 
     def get_data_from_file(self, f):
+
         with open(f, "r") as fd:
             reader = csv.reader(fd)
 
