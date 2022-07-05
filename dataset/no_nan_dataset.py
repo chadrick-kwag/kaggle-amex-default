@@ -224,11 +224,17 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             "R_28": {"type": "float"},
         }
 
-        assert os.path.exists(label_csv_file)
         self.label_csv_file = label_csv_file
         self.load_label()
 
     def load_label(self):
+
+        # if label csv file is None, this dataset is being used for inference. no need to prepare gt
+        if self.label_csv_file is None:
+            self.label_dict = None
+            return
+
+        assert os.path.exists(self.label_csv_file)
         self.label_dict = {}
         with open(self.label_csv_file, "r") as fd:
             reader = csv.reader(fd)
@@ -314,7 +320,11 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
         # get cid
         cid = lines[0][0]
-        label = self.label_dict[cid]
+
+        if self.label_dict:
+            label = self.label_dict[cid]
+        else:
+            label = None
         # handle lines
 
         data_list = []
@@ -331,24 +341,39 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             self.convert_row_data_dict_to_vector(d) for d in data_list
         ]
 
-        return {
+        return_data = {
+            "file": f,
             "token_types": torch.IntTensor(type_token_list),
             "token_features": torch.FloatTensor(data_arr_list),
-            "label": torch.FloatTensor([label]),
         }
+
+        if label:
+            return_data["label"] = torch.FloatTensor([label])
+
+        return return_data
 
     @classmethod
     def collate(cls, data_list):
 
+        # check if label exist in data
+        label_exist = False
+        if hasattr(data_list[0], "label"):
+            label_exist = True
+
+        batch_files = []
         batch_token_type = []
         batch_token_features = []
         batch_label = []
         seq_len_list = []
+
         for d in data_list:
+            batch_files.append(d["file"])
             seq_len_list.append(d["token_types"].shape[0])
             batch_token_type.append(d["token_types"])
             batch_token_features.append(d["token_features"])
-            batch_label.append(d["label"])
+
+            if label_exist:
+                batch_label.append(d["label"])
 
         max_seq_len = max(seq_len_list)
 
@@ -370,12 +395,13 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             seq_len = d["token_features"].shape[0]
             batch_token_features[i, :seq_len] = d["token_features"]
 
-        label_dim = data_list[0]["label"].shape[0]
-        label_dtype = data_list[0]["label"].dtype
-        batch_label = torch.zeros((len(data_list), label_dim), dtype=label_dtype)
+        if label_exist:
+            label_dim = data_list[0]["label"].shape[0]
+            label_dtype = data_list[0]["label"].dtype
+            batch_label = torch.zeros((len(data_list), label_dim), dtype=label_dtype)
 
-        for i, d in enumerate(data_list):
-            batch_label[i] = d["label"]
+            for i, d in enumerate(data_list):
+                batch_label[i] = d["label"]
 
         # create key_padding_mask
         batch_key_padding_mask = torch.ones(
@@ -386,11 +412,14 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             batch_key_padding_mask[i, :l] = False
 
         batched_data = {
+            "files": batch_files,
             "token_types": batch_token_types,
             "token_features": batch_token_features,
-            "label": batch_label,
             "key_padding_mask": batch_key_padding_mask,
         }
+
+        if label_exist:
+            batched_data["label"]: batch_label
 
         return batched_data
 
