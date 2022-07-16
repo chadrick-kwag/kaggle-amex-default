@@ -115,7 +115,9 @@ class Model_v1(pl.LightningModule):
 
         loss = torch.nn.functional.binary_cross_entropy(default_prob, batch["label"])
 
-        self.auroc_metric.update(default_prob, batch["label"].int())
+        self.auroc_metric.update(
+            default_prob.cpu().view(-1), batch["label"].cpu().int().view(-1)
+        )
 
         self.log("valid_loss", loss)
         # self.log("auroc", self.auroc_metric)
@@ -123,9 +125,8 @@ class Model_v1(pl.LightningModule):
     def validation_epoch_end(self, outputs) -> None:
 
         auroc = self.auroc_metric.compute()
-
+        print(f"validation auroc: {auroc}")
         self.log("auroc", auroc)
-        
 
     def training_step(self, batch, batch_idx):
 
