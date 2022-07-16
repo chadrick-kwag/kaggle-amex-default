@@ -376,7 +376,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
             "token_features": torch.FloatTensor(data_arr_list),
         }
 
-        if label:
+        if label is not None:
             return_data["label"] = torch.FloatTensor([label])
 
         return return_data
@@ -386,7 +386,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
 
         # check if label exist in data
         label_exist = False
-        if hasattr(data_list[0], "label"):
+        if "label" in data_list[0]:
             label_exist = True
 
         batch_files = []
@@ -448,7 +448,7 @@ class NoNanColsDataset_v1(torch.utils.data.Dataset):
         }
 
         if label_exist:
-            batched_data["label"]: batch_label
+            batched_data["label"] = batch_label
 
         return batched_data
 

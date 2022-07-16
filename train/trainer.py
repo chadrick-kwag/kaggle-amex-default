@@ -118,7 +118,14 @@ class Model_v1(pl.LightningModule):
         self.auroc_metric.update(default_prob, batch["label"].int())
 
         self.log("valid_loss", loss)
-        self.log("auroc", self.auroc_metric)
+        # self.log("auroc", self.auroc_metric)
+
+    def validation_epoch_end(self, outputs) -> None:
+
+        auroc = self.auroc_metric.compute()
+
+        self.log("auroc", auroc)
+        
 
     def training_step(self, batch, batch_idx):
 
