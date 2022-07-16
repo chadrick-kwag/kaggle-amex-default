@@ -45,7 +45,7 @@ def main(config, outputdir):
         feature_dim=config.model.feature_dim,
     )
 
-    model.load_from_checkpoint(
+    model = model.load_from_checkpoint(
         config.ckpt,
         config=config,
         d_model=config.model.d_model,
@@ -70,7 +70,9 @@ def main(config, outputdir):
     print("dataset load complete")
 
     infer_dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=4, collate_fn=NoNanColsDataset_v1.collate
+        dataset, batch_size=config.batch_size, collate_fn=NoNanColsDataset_v1.collate,
+        num_workers=config.num_workers,
+        prefetch_factor=config.prefetch_factor,
     )
 
     print("dataloader load complete")
