@@ -204,7 +204,7 @@ def main(config):
     p = os.path.join(outputdir, "usedconfig.yaml")
 
     with open(p, "w") as fd:
-        yaml.dump(config)
+        yaml.dump(config, fd)
 
     # callback setup
 
