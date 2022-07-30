@@ -9,3 +9,6 @@ notes.txt
 **/ckpt
 **/config/**/*.yaml
 !**/config/**/sample.yaml
+data
+pyrightconfig.json
+*.tar.gz
