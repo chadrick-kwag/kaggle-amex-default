@@ -159,7 +159,7 @@ def main(config, outputdir):
     # wait for csv write process to finish
     print("inference done. waiting for csv write process to end.")
     data_queue.put("done")
-    write_csv_process.join()
+    write_process.join()
 
     print("done")
 
