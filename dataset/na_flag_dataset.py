@@ -57,7 +57,7 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
         datetime_obj_list = []
 
         for d in date_values:
-            el_list = d.split("-")
+            el_list = d["value"].split("-")
             assert len(el_list) == 3, f"invalid split for date string: {d}"
             n = datetime.datetime(*map(int, el_list))
             datetime_obj_list.append(n)
@@ -71,7 +71,7 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
             diff_days_list.append(days)
 
         for item, days in zip(item_list, diff_days_list):
-            item[date_col_name] = days
+            item[date_col_name]["value"] = days
 
         return item_list
 
@@ -95,17 +95,35 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
                     parsing_config = parsing_config_list[parse_config_index]
 
                     _type = parsing_config["type"]
-                    if elem == "":
-                        v = ""
-                    else:
-                        if _type == "date":
-                            v = elem
-                        elif _type == "float":
+                    if _type == "date":
+                        assert elem != "", "empty value for date"
+                        v = elem
+                        na = False
+                    elif _type == "float":
+                        if elem == "":
+                            na = True
+                            v = 0
+                        else:
+                            na = False
                             v = float(elem)
-                        elif _type == "category":
-                            v = parsing_config["mapping"][elem]
+                    elif _type == "category":
+                        _size = parsing_config["size"]
+                        vec = [0] * _size
+                        if elem == "":
+                            na = True
+                        else:
+                            na = False
+                            idx = parsing_config["mapping"][elem]
+                            vec[idx] = 1
 
-                    item[h] = v
+                        v = vec
+
+                    if na is True:
+                        na = 1
+                    else:
+                        na = 0
+
+                    item[h] = {"na": na, "value": v}
 
                 item_list.append(item)
 
@@ -151,27 +169,42 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
             for data in data_list:
                 l = len(data["item_list"])
                 pad_size = max_len - l
-                key_values = [d[k] for d in data["item_list"]]
-                padded_key_values = key_values + [0] * pad_size
+                key_values = [d[k]["value"] for d in data["item_list"]]
+
+                first_key_value = key_values[0]
+
+                if isinstance(first_key_value, list):
+                    empty_key_value = [0] * len(first_key_value)
+                    padded_key_values = key_values + [empty_key_value] * pad_size
+                elif isinstance(first_key_value, int) or isinstance(
+                    first_key_value, float
+                ):
+                    empty_key_value = 0
+                    padded_key_values = [[a] for a in key_values]
+                    padded_key_values = (
+                        padded_key_values + [[empty_key_value]] * pad_size
+                    )
+                else:
+                    raise Exception(
+                        f"invalid type for first key value: {type(first_key_value)}"
+                    )
+
                 na_list = [0] * l
                 na_list = na_list + [1] * pad_size
-
-                for i, key_value in enumerate(key_values):
-                    if key_value == "":
-                        na_list[i] = 1
-                        padded_key_values[i] = 0
 
                 batch_na_list.append(na_list)
                 batch_value_list.append(padded_key_values)
 
-            _type = self.col_name_to_type_dict[k]
-            batch_na_list = torch.IntTensor(batch_na_list)
-            if _type == "date" or _type == "float":
-                batch_value_list = torch.FloatTensor(batch_value_list)
-            elif _type == "category":
-                batch_value_list = torch.LongTensor(batch_value_list)
-            else:
-                raise Exception(f"invalid type: {_type}")
+            # _type = self.col_name_to_type_dict[k]
+            batch_na_list = torch.IntTensor(batch_na_list).unsqueeze(-1)
+            # if _type == "date" or _type == "float":
+            #     batch_value_list = torch.FloatTensor(batch_value_list)
+            # elif _type == "category":
+            #     batch_value_list = torch.LongTensor(batch_value_list)
+            # else:
+            #     raise Exception(f"invalid type: {_type}")
+
+            batch_value_list = torch.FloatTensor(batch_value_list)
 
             padded_data[k] = {"na": batch_na_list, "value": batch_value_list}
 
