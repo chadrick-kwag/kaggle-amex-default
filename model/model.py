@@ -40,7 +40,7 @@ class Model_v2(torch.nn.Module):
             if c["type"] == "float":
                 embedding = torch.nn.Linear(2, d_model)
             elif c["type"] == "category":
-                embedding = torch.nn.Embedding(c["size"] + 1, d_model)
+                embedding = torch.nn.Linear(c["size"] + 1, d_model)
             else:
                 raise Exception(f"invalid embedding config: {c}")
 

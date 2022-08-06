@@ -195,18 +195,16 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
                 batch_na_list.append(na_list)
                 batch_value_list.append(padded_key_values)
 
-            # _type = self.col_name_to_type_dict[k]
             batch_na_list = torch.IntTensor(batch_na_list).unsqueeze(-1)
-            # if _type == "date" or _type == "float":
-            #     batch_value_list = torch.FloatTensor(batch_value_list)
-            # elif _type == "category":
-            #     batch_value_list = torch.LongTensor(batch_value_list)
-            # else:
-            #     raise Exception(f"invalid type: {_type}")
 
             batch_value_list = torch.FloatTensor(batch_value_list)
 
             padded_data[k] = {"na": batch_na_list, "value": batch_value_list}
+
+        # false marking for key padding mask
+        for i, data in enumerate(data_list):
+            seq_len = len(data["item_list"])
+            batch_key_padding_mask[i, :seq_len] = False
 
         collated_data = {
             "data": padded_data,
@@ -216,7 +214,15 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
         if "label" in data_list[0]:
             batch_label = [d["label"] for d in data_list]
 
-            batch_label = torch.LongTensor(batch_label)
+            batch_label = torch.FloatTensor(batch_label).unsqueeze(-1)
+
+            # add epsilon to 0 or 1
+            batch_label = torch.maximum(
+                batch_label, torch.ones_like(batch_label) * 1e-8
+            )
+            batch_label = torch.minimum(
+                batch_label, torch.ones_like(batch_label) - 1e-8
+            )
 
             collated_data["label"] = batch_label
 
