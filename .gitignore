@@ -12,3 +12,4 @@ notes.txt
 data
 pyrightconfig.json
 *.tar.gz
+**/*.sh
