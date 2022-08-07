@@ -25,10 +25,19 @@ class Model_v1(torch.nn.Module):
 
 class Model_v2(torch.nn.Module):
     def __init__(
-        self, d_model, n_head, activation, num_layers, embedding_config_list: list
+        self,
+        d_model,
+        n_head,
+        activation,
+        num_layers,
+        dim_feedforward,
+        embedding_config_list: list,
+        dropout=None,
     ):
         super().__init__()
-        self.encoder = Encoder(d_model, n_head, activation, num_layers)
+        self.encoder = Encoder(
+            d_model, n_head, activation, num_layers, dim_feedforward, dropout=dropout
+        )
 
         self.encoder_output_clsf_module = TwoStageLinearModule(d_model, 512, 2)
         self.embedding_config_list = embedding_config_list

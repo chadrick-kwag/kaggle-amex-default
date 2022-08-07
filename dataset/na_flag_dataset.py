@@ -130,7 +130,7 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
         # handle date values among items
         item_list = cls.convert_date_to_float(item_list)
 
-        data = {"item_list": item_list}
+        data = {"item_list": item_list, "file": f}
 
         if cur:
             res = cur.execute("SELECT broke from table1 where cid=?", (cid,))
@@ -206,9 +206,13 @@ class NA_Flag_Dataset(torch.utils.data.Dataset):
             seq_len = len(data["item_list"])
             batch_key_padding_mask[i, :seq_len] = False
 
+        # gather file
+        gathered_files = [a["file"] for a in data_list]
+
         collated_data = {
             "data": padded_data,
             "key_padding_mask": batch_key_padding_mask,
+            "file": gathered_files,
         }
 
         if "label" in data_list[0]:
