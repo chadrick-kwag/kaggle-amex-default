@@ -63,9 +63,19 @@ class Inference:
     def setup_outputdir(self):
         print("setup outputdir...")
 
+        if hasattr(self.config, "outputdir"):
+            assert os.path.exists(self.config.outputdir)
+            self.outputdir = self.config.outputdir
+            return
+
         timestamp = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
 
-        outputdir = f"testoutput/infer_v2/{timestamp}"
+        fn = timestamp
+        if hasattr(self.config, "suffix"):
+            if self.config.suffix is not None:
+                fn = f"{timestamp}_{self.config.suffix}"
+
+        outputdir = f"testoutput/infer_v2/{fn}"
 
         os.makedirs(outputdir)
 
