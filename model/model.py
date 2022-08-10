@@ -32,6 +32,8 @@ class Model_v2(torch.nn.Module):
         num_layers,
         dim_feedforward,
         embedding_config_list: list,
+        clsf_inter_dim=512,
+        clsf_last_activation=False,
         dropout=None,
     ):
         super().__init__()
@@ -39,7 +41,10 @@ class Model_v2(torch.nn.Module):
             d_model, n_head, activation, num_layers, dim_feedforward, dropout=dropout
         )
 
-        self.encoder_output_clsf_module = TwoStageLinearModule(d_model, 512, 2)
+        self.build_encoder_output_clsf_module(
+            d_model, clsf_inter_dim, clsf_last_activation
+        )
+
         self.embedding_config_list = embedding_config_list
 
         self.embedding_list = []
@@ -56,6 +61,14 @@ class Model_v2(torch.nn.Module):
             setattr(self, f"embedding_{i}", embedding)
             self.embedding_list.append(embedding)
             self.colname_to_index_dict[c["col_name"]] = i
+
+    def build_encoder_output_clsf_module(
+        self, d_model, clsf_inter_dim, clsf_last_activation
+    ):
+
+        self.encoder_output_clsf_module = TwoStageLinearModule(
+            d_model, clsf_inter_dim, 2, last_activation=clsf_last_activation
+        )
 
     def forward(self, data, key_padding_mask):
         """
